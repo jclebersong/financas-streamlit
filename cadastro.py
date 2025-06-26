@@ -19,7 +19,14 @@ def cadastro():
             st.error("Usuário já existe.")
         else:
             senha_hash = hash_senha(nova_senha)
-            if criar_usuario(novo_usuario, senha_hash):
-                st.success("Usuário cadastrado com sucesso!")
-            else:
-                st.error("Erro ao cadastrar usuário.")
+            # if criar_usuario(novo_usuario, senha_hash):
+            #     st.success("Usuário cadastrado com sucesso!")
+            # else:
+            #     st.error("Erro ao cadastrar usuário.")
+            try:
+                if criar_usuario(novo_usuario, senha_hash):
+                    st.success("Usuário cadastrado com sucesso!")
+                else:
+                    st.error("Erro ao cadastrar usuário.")
+            except Exception as e:
+                st.error(f"Erro ao cadastrar usuário: {e}")

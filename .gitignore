@@ -192,3 +192,26 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Ignora arquivos de ambiente virtual
+venv/
+.env
+
+# Banco de dados local (se ainda existir)
+*.db
+*.sqlite3
+data/
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# Arquivos de exportação
+*.xlsx
+*.pdf
+
+# VSCode settings (opcional)
+.vscode/
+
+# Streamlit internals
+.streamlit/secrets.toml
