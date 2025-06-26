@@ -277,15 +277,13 @@ from supabase import create_client
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from dateutil import parser
+import streamlit as st
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-print("SUPABASE_URL:", SUPABASE_URL)
-print("SUPABASE_KEY:", SUPABASE_KEY)
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
