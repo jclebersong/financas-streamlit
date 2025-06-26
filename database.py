@@ -3,9 +3,6 @@
 # from dateutil.relativedelta import relativedelta
 # from supabase import create_client
 
-# SUPABASE_URL = "https://hjnzaalqvscibrlhqcxo.supabase.co"
-# SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqbnphYWxxdnNjaWJybGhxY3hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4OTMzMDcsImV4cCI6MjA2NjQ2OTMwN30.arlr4Z5zGSK3LRWDngF9__Tay0cCJyy3TfGtJAP8zuI"
-
 # supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # def conexao():
