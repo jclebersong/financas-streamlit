@@ -5,7 +5,12 @@ from utils import hash_senha
 
 def cadastro():
     st.title("\U0001F4DD Cadastro de Novo Usuário")
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
+    print("SUPABASE_URL:", SUPABASE_URL)
+    print("SUPABASE_KEY:", SUPABASE_KEY)
+    
     novo_usuario = st.text_input("Novo Usuário")
     nova_senha = st.text_input("Nova Senha", type="password")
     confirmar_senha = st.text_input("Confirmar Senha", type="password")
