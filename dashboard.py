@@ -12,6 +12,14 @@ import plotly.graph_objects as go
 import locale
 #locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
+# def formatar_real(valor):
+#     if isinstance(valor, str):
+#         valor = valor.replace("R$", "").replace(".", "").replace(",", ".")
+#         try:
+#             valor = float(valor)
+#         except Exception:
+#             valor = 0.0
+#     return locale.currency(valor, grouping=True, symbol=True)
 def formatar_real(valor):
     if isinstance(valor, str):
         valor = valor.replace("R$", "").replace(".", "").replace(",", ".")
@@ -19,7 +27,7 @@ def formatar_real(valor):
             valor = float(valor)
         except Exception:
             valor = 0.0
-    return locale.currency(valor, grouping=True, symbol=True)
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def show_dashboard(usuario):
     st.set_page_config(layout="wide")
