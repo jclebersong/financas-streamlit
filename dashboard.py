@@ -10,7 +10,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 import locale
-locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+#locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 def formatar_real(valor):
     if isinstance(valor, str):
