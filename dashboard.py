@@ -6,9 +6,20 @@ from database import listar_transacoes, calcular_saldo, obter_resumo_por_tipo, o
 from datetime import datetime
 from io import BytesIO
 from fpdf import FPDF
+import plotly.express as px
+import plotly.graph_objects as go
+
+import locale
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 def formatar_real(valor):
-    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    if isinstance(valor, str):
+        valor = valor.replace("R$", "").replace(".", "").replace(",", ".")
+        try:
+            valor = float(valor)
+        except Exception:
+            valor = 0.0
+    return locale.currency(valor, grouping=True, symbol=True)
 
 def show_dashboard(usuario):
     st.set_page_config(layout="wide")
@@ -53,6 +64,10 @@ def show_dashboard(usuario):
                 else:
                     adicionar_transacao(usuario, tipo, descricao, valor_float, data_transacao)
                 st.success("Transação adicionada com sucesso!")
+                # Limpa os campos
+                st.session_state["descricao"] = ""
+                st.session_state["valor"] = ""
+                st.session_state["parcelas"] = ""
             except Exception as e:
                 st.error(f"Erro ao adicionar: {e}")
 
@@ -73,24 +88,29 @@ def show_dashboard(usuario):
     data_fim_str = data_fim.strftime("%Y-%m-%d") if data_fim else None
 
     transacoes = listar_transacoes(usuario, tipo_filtro, data_ini_str, data_fim_str, mes if mes != "Todos" else None, ano if ano != "Todos" else None)
-    df = pd.DataFrame(transacoes, columns=["ID", "Tipo", "Descrição", "Valor", "Data"])
-    #df["Data"] = pd.to_datetime(df["Data"])
-    df["Data"] = pd.to_datetime(df["Data"], format='mixed')
-    df["Data"] = df["Data"].dt.strftime("%d/%m/%Y %H:%M")
-    df["Valor"] = df["Valor"].apply(formatar_real)
-    df_exibir = df.drop(columns=["ID"])
+    df = pd.DataFrame(transacoes)
 
+    if not df.empty:
+        df.rename(columns={
+            "id": "ID",
+            "tipo": "Tipo",
+            "descricao": "Descrição",
+            "valor": "Valor",
+            "data": "Data"
+        }, inplace=True)
+
+        df = df[["ID", "Tipo", "Descrição", "Valor", "Data"]]
+        df["Data"] = pd.to_datetime(df["Data"], format='mixed')
+        df["Data"] = df["Data"].dt.strftime("%d/%m/%Y %H:%M")
+        df_exibir = df.copy()
+        df_exibir["Valor"] = df_exibir["Valor"].apply(formatar_real)
+        df_exibir = df_exibir.drop(columns=["ID"])
+
+        selected_rows = st.dataframe(df_exibir, use_container_width=True, height=220, hide_index=True)
+    else:
+        st.info("Nenhuma transação encontrada com esse filtro.")
+   
     st.subheader("📄 Transações Registradas")
-
-    # if not df.empty:
-    #     with st.expander("🗑️ Excluir Transação"):
-    #         trans_id = st.selectbox("Selecione o ID para excluir", df["ID"].astype(str))
-    #         if st.button("Excluir"):
-    #             from database import remover_transacao_por_id
-    #             remover_transacao_por_id(trans_id)
-    #             st.success("Transação excluída com sucesso!")
-    #             st.rerun()
-    # selected_rows = st.dataframe(df, use_container_width=True, height=220, hide_index=True)
 
     if not df.empty:
         with st.expander("🗑️ Excluir Transação"):
@@ -100,8 +120,9 @@ def show_dashboard(usuario):
             if st.button("Excluir"):                
                 remover_transacao_por_descricao(desc_sel, usuario)
                 st.success("Transação(s) excluída(s) com sucesso!")
+                st.session_state["trans_id"] = None
                 st.rerun()
-    selected_rows = st.dataframe(df_exibir, use_container_width=True, height=220, hide_index=True)
+    #selected_rows = st.dataframe(df_exibir, use_container_width=True, height=220, hide_index=True)
 
     output_excel = BytesIO()
     with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
@@ -121,9 +142,9 @@ def show_dashboard(usuario):
         pdf.set_font("Arial", size=12)
         pdf.cell(200, 10, txt="Relatório de Transações", ln=True, align="C")
         pdf.ln(10)
-        for index, row in df.iterrows():
-            #linha = f"{row['Data'].strftime('%Y-%m-%d')} - {row['Tipo']}: {row['Descrição']} - R$ {row['Valor']:.2f}"
-            linha = f"{row['Data'].strftime('%Y-%m-%d')} - {row['Tipo']}: {row['Descrição']} - {formatar_real(row['Valor'])}"
+        for index, row in df.iterrows():            
+            data_formatada = datetime.strptime(row['Data'], "%d/%m/%Y %H:%M").strftime("%Y-%m-%d")
+            linha = f"{data_formatada} - {row['Tipo']}: {row['Descrição']} - {formatar_real(row['Valor'])}"
             pdf.multi_cell(0, 10, linha)
         pdf_output = BytesIO()
         pdf_bytes = pdf.output(dest='S').encode('latin1')
@@ -139,49 +160,148 @@ def show_dashboard(usuario):
     st.subheader("📈 Análise Gráfica")
     col_graf1, col_graf2 = st.columns(2)
 
+    # with col_graf1:
+    #     resumo_tipo = obter_resumo_por_tipo(usuario, tipo_filtro, data_ini_str, data_fim_str, mes if mes != "Todos" else None, ano if ano != "Todos" else None)
+    #     if resumo_tipo:
+    #         tipos, valores = zip(*resumo_tipo)
+    #         fig1, ax1 = plt.subplots(figsize=(3.5, 3.5))
+    #         ax1.pie(valores, labels=tipos, autopct="%1.1f%%", startangle=90)
+    #         ax1.axis("equal")
+    #         st.pyplot(fig1)
+    #     else:
+    #         st.info("Nenhum dado para o gráfico de pizza.")
     with col_graf1:
-        resumo_tipo = obter_resumo_por_tipo(usuario, tipo_filtro, data_ini_str, data_fim_str, mes if mes != "Todos" else None, ano if ano != "Todos" else None)
-        if resumo_tipo:
-            tipos, valores = zip(*resumo_tipo)
-            fig1, ax1 = plt.subplots(figsize=(3.5, 3.5))
-            ax1.pie(valores, labels=tipos, autopct="%1.1f%%", startangle=90)
-            ax1.axis("equal")
-            st.pyplot(fig1)
-        else:
-            st.info("Nenhum dado para o gráfico de pizza.")
+        resumo_tipo = obter_resumo_por_tipo(
+        usuario, tipo_filtro, data_ini_str, data_fim_str,
+        mes if mes != "Todos" else None,
+        ano if ano != "Todos" else None
+    )
 
+    if resumo_tipo:
+        tipos, valores = zip(*resumo_tipo)
+        df_pizza = pd.DataFrame({
+            "Tipo": tipos,
+            "Valor": valores
+        })
+
+        fig = px.pie(
+            df_pizza,
+            names="Tipo",
+            values="Valor",
+            title="Distribuição por Tipo",
+            hole=0  # ou coloque 0.4 para gráfico de rosca (donut chart)
+        )
+
+        fig.update_traces(
+            textinfo="percent+label",
+            textfont_size=14
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("Nenhum dado para o gráfico de pizza.")
+
+    # with col_graf2:
+    #     resumo_mensal = obter_resumo_mensal(usuario, tipo_filtro, data_ini_str, data_fim_str, mes if mes != "Todos" else None, ano if ano != "Todos" else None)
+    #     if resumo_mensal:
+    #         df_resumo = pd.DataFrame(resumo_mensal, columns=["Mes", "Tipo", "Valor"])
+
+    #         # Pivot para separar Receita e Despesa por mês
+    #         df_pivot = df_resumo.pivot_table(index="Mes", columns="Tipo", values="Valor", aggfunc="sum").fillna(0)
+           
+    #         # Garante que todas as colunas existem
+    #         for col in ["Receita", "Despesa", "Saldo"]:
+    #             if col not in df_pivot.columns:
+    #                 df_pivot[col] = 0
+            
+    #         # Calcula o saldo do mês            
+    #         df_pivot["Saldo"] = df_pivot.get("Receita", 0) - df_pivot.get("Despesa", 0)
+
+    #         df_pivot = df_pivot[["Receita", "Despesa", "Saldo"]]
+
+    #         fig2, ax2 = plt.subplots(figsize=(max(10, len(df_pivot.index) * 1.2), 7))  # Aumenta largura e altura
+    #         df_pivot[["Receita", "Despesa", "Saldo"]].plot(kind="bar", ax=ax2, width=0.7)  # barras mais largas
+
+    #         ymax = df_pivot[["Receita", "Despesa", "Saldo"]].values.max() * 1.20
+    #         ymin = min(0, df_pivot[["Receita", "Despesa", "Saldo"]].values.min() * 1.20)
+    #         ax2.set_ylim(ymin, ymax)
+
+    #         for container in ax2.containers:
+    #             ax2.bar_label(container, fmt="%.2f", padding=4, fontsize=12, rotation=90, label_type='edge')  # fonte maior e mais espaçamento
+
+    #         ax2.set_title("Receitas, Despesas e Saldo por Mês", fontsize=18)
+    #         ax2.set_ylabel("Valor", fontsize=14)
+    #         ax2.set_xlabel("Mês", fontsize=14)
+    #         ax2.tick_params(axis='x', rotation=45, labelsize=12)
+    #         ax2.tick_params(axis='y', labelsize=12)
+    #         ax2.legend(fontsize=12)
+    #         st.pyplot(fig2)
+            
+                      
+    #     else:
+    #         st.info("Nenhum dado para o gráfico de barras.")
     with col_graf2:
-        resumo_mensal = obter_resumo_mensal(usuario, tipo_filtro, data_ini_str, data_fim_str, mes if mes != "Todos" else None, ano if ano != "Todos" else None)
-        if resumo_mensal:
-            df_resumo = pd.DataFrame(resumo_mensal, columns=["Mes", "Tipo", "Valor"])
-            fig2, ax2 = plt.subplots(figsize=(max(8, len(df_resumo["Mes"].unique()) * 0.7), 4))
-            sns.barplot(data=df_resumo, x="Mes", y="Valor", hue="Tipo", ax=ax2)
-            for p in ax2.patches:
-                height = p.get_height()
-                if not pd.isna(height):
-                    ax2.text(
-                        p.get_x() + p.get_width() / 2.,
-                        height + 0.5,
-                        formatar_real(height),
-                        ha="center", fontsize=7, color="black", rotation=90
-                    )
-            ax2.set_title("Receitas e Despesas por Mês")
-            ax2.tick_params(axis='x', rotation=45)
-            st.pyplot(fig2)
-            # fig2, ax2 = plt.subplots(figsize=(6, 4))
-            # sns.barplot(data=df_resumo, x="Mes", y="Valor", hue="Tipo", ax=ax2)
-            # for p in ax2.patches:
-            #     height = p.get_height()
-            #     if not pd.isna(height):
-            #         ax2.text(
-            #             p.get_x() + p.get_width() / 2.,
-            #             height + 0.5,
-            #             formatar_real(height),
-            #             #f"R$ {height:.2f}",
-            #             ha="center", fontsize=8, color="black"
-            #         )
-            # ax2.set_title("Receitas e Despesas por Mês")
-            # ax2.tick_params(axis='x', rotation=45)
-            # st.pyplot(fig2)
-        else:
-            st.info("Nenhum dado para o gráfico de barras.")
+        resumo_mensal = obter_resumo_mensal(
+        usuario, tipo_filtro, data_ini_str, data_fim_str, 
+        mes if mes != "Todos" else None, 
+        ano if ano != "Todos" else None
+    )
+    
+    if resumo_mensal:
+        df_resumo = pd.DataFrame(resumo_mensal, columns=["Mes", "Tipo", "Valor"])
+
+        # Pivot para Receita, Despesa por mês
+        df_pivot = df_resumo.pivot_table(index="Mes", columns="Tipo", values="Valor", aggfunc="sum").fillna(0)
+
+        for col in ["Receita", "Despesa"]:
+            if col not in df_pivot.columns:
+                df_pivot[col] = 0
+
+        df_pivot["Saldo"] = df_pivot.get("Receita", 0) - df_pivot.get("Despesa", 0)
+        df_pivot = df_pivot.reset_index()
+
+        # Traduz os nomes dos meses para pt-BR
+        MESES_PT = {
+            "January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril",
+            "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto",
+            "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro",
+            "Jan": "Jan", "Feb": "Fev", "Mar": "Mar", "Apr": "Abr",
+            "May": "Mai", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago",
+            "Sep": "Set", "Oct": "Out", "Nov": "Nov", "Dec": "Dez",
+            1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+            5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+            9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+        }
+
+        df_pivot["Mes"] = df_pivot["Mes"].map(MESES_PT).fillna(df_pivot["Mes"])
+
+        # Converte para formato "long" para usar no plotly
+        df_long = df_pivot.melt(id_vars="Mes", value_vars=["Receita", "Despesa", "Saldo"], 
+                                var_name="Tipo", value_name="Valor")
+
+        # Criação do gráfico com plotly
+        fig = px.bar(
+            df_long, 
+            x="Mes", 
+            y="Valor", 
+            color="Tipo", 
+            barmode="group", 
+            text_auto=".2f",
+            title="Receitas, Despesas e Saldo por Mês"
+        )
+
+        fig.update_layout(
+            xaxis_title="Mês",
+            yaxis_title="Valor",
+            legend_title="Tipo",
+            bargap=0.2,
+            font=dict(size=14),
+            height=600,
+            xaxis_tickangle=-45
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+    
+    else:
+        st.info("Nenhum dado para o gráfico de barras.")

@@ -5,11 +5,6 @@ from utils import hash_senha
 
 def cadastro():
     st.title("\U0001F4DD Cadastro de Novo Usuário")
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-
-    print("SUPABASE_URL:", SUPABASE_URL)
-    print("SUPABASE_KEY:", SUPABASE_KEY)
     
     novo_usuario = st.text_input("Novo Usuário")
     nova_senha = st.text_input("Nova Senha", type="password")
@@ -22,15 +17,16 @@ def cadastro():
             st.error("As senhas não coincidem.")
         elif buscar_usuario(novo_usuario):
             st.error("Usuário já existe.")
+            st.session_state.clear()
+            st.rerun() 
         else:
-            senha_hash = hash_senha(nova_senha)
-            # if criar_usuario(novo_usuario, senha_hash):
-            #     st.success("Usuário cadastrado com sucesso!")
-            # else:
-            #     st.error("Erro ao cadastrar usuário.")
+            senha_hash = hash_senha(nova_senha)          
             try:
+                print(f"Usuário: {novo_usuario}, Senha Hash: {senha_hash}")
                 if criar_usuario(novo_usuario, senha_hash):
                     st.success("Usuário cadastrado com sucesso!")
+                    st.session_state.clear()
+                    st.rerun()                    
                 else:
                     st.error("Erro ao cadastrar usuário.")
             except Exception as e:

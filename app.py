@@ -1,33 +1,3 @@
-# import streamlit as st
-# from database import buscar_usuario
-# from utils import verificar_senha
-# from dashboard import show_dashboard
-
-# st.set_page_config(page_title="Login - Controle Financeiro", layout="wide")
-
-# def login():
-#     st.title("\U0001F512 Login - Controle de Finanças")
-#     usuario = st.text_input("Usuário")
-#     senha = st.text_input("Senha", type="password")
-
-#     if st.button("Entrar"):
-#         hash_salvo = buscar_usuario(usuario)
-#         if hash_salvo and verificar_senha(senha, hash_salvo[0]):
-#             st.session_state["usuario"] = usuario
-#             st.success("Login realizado com sucesso!")
-#             st.rerun()
-#         else:
-#             st.error("Usuário ou senha inválidos.")
-
-#     if st.button("Cadastrar novo usuário"):
-#         from cadastro import cadastro
-#         cadastro()
-#         st.stop()
-
-# if "usuario" not in st.session_state:
-#     login()
-# else:
-#     show_dashboard(st.session_state["usuario"])
 import streamlit as st
 from database import buscar_usuario
 from utils import verificar_senha
@@ -36,27 +6,33 @@ from cadastro import cadastro
 
 st.set_page_config(page_title="Login - Controle Financeiro", layout="wide")
 
-if "usuario" in st.session_state:
-    show_dashboard(st.session_state["usuario"])
-
-elif st.session_state.get("cadastro"):
+# Acesso à tela de cadastro
+if st.session_state.get("cadastro"):
     cadastro()
 
+# Verifica se já está logado
+elif st.session_state.get("usuario"):
+    show_dashboard(st.session_state["usuario"])
+
+# Exibe tela de login
 else:
     st.title("🔐 Login - Controle de Finanças")
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
 
-    if st.button("Entrar"):
-        hash_salvo = buscar_usuario(usuario)
-        if hash_salvo and verificar_senha(senha, hash_salvo[0]):
-            st.session_state["usuario"] = usuario
-            st.success("Login realizado com sucesso!")
+    usuario = st.text_input("Usuário", key="login_usuario")
+    senha = st.text_input("Senha", type="password", key="login_senha")
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        if st.button("Entrar"):
+            hash_salvo = buscar_usuario(usuario)
+            if hash_salvo and verificar_senha(senha, hash_salvo[0]):
+                st.session_state["usuario"] = usuario
+                st.success("Login realizado com sucesso!")
+                st.rerun()
+            else:
+                st.error("Usuário ou senha inválidos.")
+
+    with col2:
+        if st.button("Cadastrar novo usuário"):
+            st.session_state["cadastro"] = True
             st.rerun()
-        else:
-            st.error("Usuário ou senha inválidos.")
-
-    if st.button("Cadastrar novo usuário"):
-        st.session_state["cadastro"] = True
-        st.rerun()
-
