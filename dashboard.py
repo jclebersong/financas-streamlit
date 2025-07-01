@@ -199,7 +199,7 @@ def show_dashboard(usuario):
             names="Tipo",
             values="Valor",
             title="Distribuição por Tipo",
-            hole=0  # ou coloque 0.4 para gráfico de rosca (donut chart)
+            hole=0.4  # ou coloque 0.4 para gráfico de rosca (donut chart)
         )
 
         fig.update_traces(
