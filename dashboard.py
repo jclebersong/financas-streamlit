@@ -58,11 +58,13 @@ def show_dashboard(usuario):
         with col2:
             valor = st.text_input("Valor (use ponto ou vírgula)", key="valor")
             parcelas = st.text_input("Parcelas (opcional)", key="parcelas")
+            data_cadastro = st.date_input("Data de cadastro", value=None)
 
         if st.button("Adicionar Transação"):
             try:
                 valor_float = float(valor.replace("R$", "").replace(".", "").replace(",", "."))
-                data_transacao = datetime.now().strftime("%Y-%m-%d %H:%M")
+                #data_transacao = datetime.now().strftime("%Y-%m-%d %H:%M")
+                data_transacao = data_cadastro.strftime("%Y-%m-%d %H:%M")
                 if parcelas.strip():
                     qtd = int(parcelas.strip())
                     if qtd > 1:
